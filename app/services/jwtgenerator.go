@@ -25,5 +25,5 @@ func (s *JwtGeneratorService) Generate(claims map[string]string) (string, error)
 	jwtClaims["exp"] = time.Now().Add(time.Duration(s.config.TTLSeconds) * time.Second).Unix()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)
-	return token.SignedString(s.config.Secret)
+	return token.SignedString([]byte(s.config.Secret))
 }

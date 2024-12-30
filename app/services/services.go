@@ -14,8 +14,9 @@ type Services struct {
 func BuildServices(connection *dbconnection.Manager, config config.Config) *Services {
 	userRepository := repositories.NewUserRepositrory(connection)
 	jwtGenerator := NewJwtGeneratorService(config.Jwt)
-	userService := NewUserService(userRepository, jwtGenerator)
-	
+	passwordHasher := NewPasswordHasher()
+	userService := NewUserService(userRepository, jwtGenerator, passwordHasher)
+
 	return &Services{
 		UserService:  userService,
 		JwtGenerator: jwtGenerator,

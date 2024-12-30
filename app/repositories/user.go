@@ -2,8 +2,15 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
+	"service/auth/app/domain/dtos"
 	"service/auth/app/repositories/dbconnection"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserRepositrory struct {
@@ -14,15 +21,31 @@ func NewUserRepositrory(conn *dbconnection.Manager) *UserRepositrory {
 	return &UserRepositrory{conn: conn}
 }
 
-func (r *UserRepositrory) UserExists(ctx context.Context, username, passwordHash string) (bool, error) {
+func (r *UserRepositrory) UserWithHash(ctx context.Context, username string) (dtos.UserWithHash, error) {
 	exec := r.conn.Executor(ctx)
-	var exists bool
-	stmt, err := exec.PrepareContext(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND password_hash = $2)")
+	stmt, err := exec.PrepareContext(ctx, "SELECT id, password_hash FROM users WHERE username = $1")
 	if err != nil {
-		slog.ErrorContext(ctx, "Error preparing statement", slog.Any("error", err))
-		return false, err
+		slog.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		return dtos.UserWithHash{}, err
 	}
 
-	stmt.QueryRowContext(ctx, username, passwordHash).Scan(&exists)
-	return exists, nil
+	defer stmt.Close()
+
+	var passwordHash string
+	var id int64
+	err = stmt.QueryRowContext(ctx, username).Scan(&id, &passwordHash)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return dtos.UserWithHash{}, ErrUserNotFound
+		}
+
+		slog.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		return dtos.UserWithHash{}, err
+
+	}
+
+	return dtos.UserWithHash{
+		Id:           id,
+		PasswordHash: passwordHash,
+	}, nil
 }

@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"service/auth/app/domain/dtos"
 	"service/auth/app/domain/requests"
+	"service/auth/app/repositories"
+	"slices"
+	"strconv"
 )
 
 const (
@@ -16,7 +20,11 @@ var (
 )
 
 type UserStorageAccessor interface {
-	UserExists(ctx context.Context, username, passwordHash string) (bool, error)
+	UserWithHash(ctx context.Context, username string) (dtos.UserWithHash, error)
+}
+
+type PasswordComparer interface {
+	Compare(passwordHash, password string) (bool, error)
 }
 
 type JwtGenerator interface {
@@ -26,27 +34,38 @@ type JwtGenerator interface {
 type UserService struct {
 	userStorageAccessor UserStorageAccessor
 	jwtGenerator        JwtGenerator
+	passwordComparer    PasswordComparer
 }
 
-func NewUserService(userStorageAccessor UserStorageAccessor, jwtGenerator JwtGenerator) *UserService {
+func NewUserService(userStorageAccessor UserStorageAccessor, jwtGenerator JwtGenerator, passwordComparer PasswordComparer) *UserService {
 	return &UserService{
 		userStorageAccessor: userStorageAccessor,
 		jwtGenerator:        jwtGenerator,
+		passwordComparer:    passwordComparer,
 	}
 }
 
 func (s *UserService) Login(ctx context.Context, req requests.LoginRequest) (string, error) {
-	exists, err := s.userStorageAccessor.UserExists(ctx, req.Username, req.Password)
+	user, err := s.userStorageAccessor.UserWithHash(ctx, req.Username)
 	if err != nil {
+		if errors.Is(err, repositories.ErrUserNotFound) {
+			return "", ErrInvalidCredentials
+		}
+
 		slog.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		return "", err
 	}
 
-	if !exists {
+	isValidPassword, err := s.passwordComparer.Compare(user.PasswordHash, req.Password)
+	if err != nil {
+		return "", err
+	}
+
+	if !isValidPassword {
 		return "", ErrInvalidCredentials
 	}
 
-	jwt, err := s.jwtGenerator.Generate(map[string]string{UerIdJwtClaim: req.Username})
+	jwt, err := s.jwtGenerator.Generate(map[string]string{UerIdJwtClaim: strconv.FormatInt(user.Id, 10)})
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		return "", err
