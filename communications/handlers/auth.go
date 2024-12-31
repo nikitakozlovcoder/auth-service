@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"service/auth/app/domain/requests"
-	"service/auth/app/services"
-	misc "service/auth/http/misc/errors"
+	"service/auth/app/users"
+	usersdtos "service/auth/app/users/dtos"
+	httperrors "service/auth/communications/http/misc/errors"
+	httprequests "service/auth/communications/http/requests"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +17,7 @@ type AuthHandler struct {
 }
 
 type UserAuthtenticator interface {
-	Login(context.Context, requests.LoginRequest) (string, error)
+	Login(context.Context, usersdtos.LoginRequest) (string, error)
 }
 
 func NewAuthHandler(UserAuthtenticator UserAuthtenticator) *AuthHandler {
@@ -34,16 +35,20 @@ func (h *AuthHandler) Init(r *gin.RouterGroup) {
 }
 
 func (h *AuthHandler) login(c *gin.Context) {
-	var req requests.LoginRequest
+	var req httprequests.LoginRequest
 	err := c.BindJSON(&req)
 	if err != nil {
 		return
 	}
 
-	token, err := h.userAuthtenticator.Login(c, req)
+	token, err := h.userAuthtenticator.Login(c, usersdtos.LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
+	})
+
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidCredentials) {
-			misc.BadRequestDetails(c, err)
+		if errors.Is(err, users.ErrInvalidCredentials) {
+			httperrors.BadRequestDetails(c, err)
 			return
 		}
 

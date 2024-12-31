@@ -1,7 +1,7 @@
-package services
+package jwt
 
 import (
-	"service/auth/config"
+	"service/auth/infrastructure/config"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"

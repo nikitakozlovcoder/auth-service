@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"service/auth/app/repositories/dbexecutor"
+	"service/auth/infrastructure/db/dbexecutor"
 
 	_ "github.com/lib/pq"
 )

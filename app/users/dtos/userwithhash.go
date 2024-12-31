@@ -1,4 +1,4 @@
-package dtos
+package usersdtos
 
 type UserWithHash struct {
 	Id           int64

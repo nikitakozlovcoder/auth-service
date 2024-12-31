@@ -3,7 +3,7 @@ package logger
 import (
 	"log/slog"
 	"os"
-	"service/auth/config"
+	"service/auth/infrastructure/config"
 )
 
 func Init(cfg config.Config) {

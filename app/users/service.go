@@ -1,13 +1,10 @@
-package services
+package users
 
 import (
 	"context"
 	"errors"
 	"log/slog"
-	"service/auth/app/domain/dtos"
-	"service/auth/app/domain/requests"
-	"service/auth/app/repositories"
-	"slices"
+	users "service/auth/app/users/dtos"
 	"strconv"
 )
 
@@ -20,7 +17,7 @@ var (
 )
 
 type UserStorageAccessor interface {
-	UserWithHash(ctx context.Context, username string) (dtos.UserWithHash, error)
+	UserWithHash(ctx context.Context, username string) (users.UserWithHash, error)
 }
 
 type PasswordComparer interface {
@@ -45,10 +42,10 @@ func NewUserService(userStorageAccessor UserStorageAccessor, jwtGenerator JwtGen
 	}
 }
 
-func (s *UserService) Login(ctx context.Context, req requests.LoginRequest) (string, error) {
+func (s *UserService) Login(ctx context.Context, req users.LoginRequest) (string, error) {
 	user, err := s.userStorageAccessor.UserWithHash(ctx, req.Username)
 	if err != nil {
-		if errors.Is(err, repositories.ErrUserNotFound) {
+		if errors.Is(err, ErrUserNotFound) {
 			return "", ErrInvalidCredentials
 		}
 
