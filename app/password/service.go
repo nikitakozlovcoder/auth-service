@@ -9,7 +9,7 @@ import (
 
 type PasswordComparerService struct{}
 
-func NewPasswordHasher() *PasswordComparerService {
+func NewPasswordComparer() *PasswordComparerService {
 	return &PasswordComparerService{}
 }
 

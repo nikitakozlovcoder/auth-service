@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"service/auth/infrastructure/clock"
 	"service/auth/infrastructure/config"
 	"time"
 
@@ -9,10 +10,11 @@ import (
 
 type JwtGeneratorService struct {
 	config config.JwtConfig
+	clock  clock.Clock
 }
 
-func NewJwtGeneratorService(config config.JwtConfig) *JwtGeneratorService {
-	return &JwtGeneratorService{config: config}
+func NewJwtGeneratorService(config config.JwtConfig, clock clock.Clock) *JwtGeneratorService {
+	return &JwtGeneratorService{config: config, clock: clock}
 }
 
 func (s *JwtGeneratorService) Generate(claims map[string]string) (string, error) {
@@ -21,8 +23,8 @@ func (s *JwtGeneratorService) Generate(claims map[string]string) (string, error)
 		jwtClaims[k] = v
 	}
 
-	jwtClaims["iat"] = time.Now().Unix()
-	jwtClaims["exp"] = time.Now().Add(time.Duration(s.config.TTLSeconds) * time.Second).Unix()
+	jwtClaims["iat"] = s.clock.Now().Unix()
+	jwtClaims["exp"] = s.clock.Now().Add(time.Duration(s.config.TTLSeconds) * time.Second).Unix()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)
 	return token.SignedString([]byte(s.config.Secret))
