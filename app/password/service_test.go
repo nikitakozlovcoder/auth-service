@@ -7,7 +7,6 @@ import (
 )
 
 func TestCompareSamePassword(t *testing.T) {
-
 	// arrange
 	passwordHash := "$2a$10$0b65BPYf9XRw0tYis0usQ.LhSg.546d0m/Cj7ux3YQTD5l5kDwOlS"
 	password := "password"
