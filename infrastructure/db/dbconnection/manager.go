@@ -3,10 +3,15 @@ package dbconnection
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"service/auth/infrastructure/db/dbexecutor"
 
 	_ "github.com/lib/pq"
+)
+
+var (
+	ErrTxAlreadyStarted = errors.New("transaction already started")
 )
 
 type txKey string
@@ -31,19 +36,19 @@ func NewManager(connString string) *Manager {
 	return &Manager{db: db}
 }
 
-func (m *Manager) BeginTx(ctx context.Context) (context.Context, error) {
+func (m *Manager) BeginTx(ctx context.Context) (Transaction, error) {
+	_, hasTx := ctx.Value(key).(*sql.Tx)
+	if hasTx {
+		return Transaction{}, ErrTxAlreadyStarted
+	}
+
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return Transaction{}, err
 	}
 
 	txctx := context.WithValue(ctx, key, tx)
-	return txctx, nil
-}
-
-func (m *Manager) StopTx(ctx context.Context) (context.Context, error) {
-	txctx := context.WithValue(ctx, key, nil)
-	return txctx, nil
+	return Transaction{txctx}, nil
 }
 
 func (m *Manager) Executor(ctx context.Context) dbexecutor.Executor {
@@ -57,4 +62,18 @@ func (m *Manager) Executor(ctx context.Context) dbexecutor.Executor {
 
 func (m *Manager) Close() error {
 	return m.db.Close()
+}
+
+type Transaction struct {
+	Ctx context.Context
+}
+
+func (t *Transaction) Commit() error {
+	tx := t.Ctx.Value(key).(*sql.Tx)
+	return tx.Commit()
+}
+
+func (t *Transaction) Rollback() error {
+	tx := t.Ctx.Value(key).(*sql.Tx)
+	return tx.Rollback()
 }
